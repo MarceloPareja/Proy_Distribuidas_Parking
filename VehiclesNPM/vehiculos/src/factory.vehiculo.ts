@@ -24,4 +24,7 @@ export class FactoryVehiculos {
         throw new BadRequestException(`Tipo de vehículo no soportado: ${dto.tipo}`);
     }
   }
+
+  
+
 }

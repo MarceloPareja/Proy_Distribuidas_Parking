@@ -3,22 +3,9 @@ import { Type } from "class-transformer";
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 import { TipoMoto } from "../entities/motocicleta.entity";
 import { Clasificacion } from "../entities/vehiculo.entity";
+import { MaxYearConstraint } from "../utils/validators";
 
-@ValidatorConstraint({ name: 'MaxYear', async: false })
-class MaxYearConstraint implements ValidatorConstraintInterface {
-  validate(year: number, args: ValidationArguments) {
-    let currentDate = new Date();
-    let currentYear = currentDate.getFullYear();
-    return year <= (currentYear + 1);
-  }
-
-  defaultMessage(args: ValidationArguments) {
-    // here you can provide default error message if validation failed
-    return 'El año no debe ser mayor al próximo año.';
-  }
-}
-
-class BaseVehiculoDto{
+export class BaseVehiculoDto{
     @IsString()//Valida para evitar ataques SQL
     @IsNotEmpty({message : "No debe dejar la placa vacía"})//No valores vacíos
     @Matches(/^[A-Z]{3}-\d{4}$/, {message: 'La placa debe tern un formato válido. Ej: ABC-1234'})
@@ -58,7 +45,7 @@ class BaseVehiculoDto{
     clasificacion! : Clasificacion;
 }
 
-class AutoDto extends BaseVehiculoDto{
+export class AutoDto extends BaseVehiculoDto{
     @IsNumber()
     @IsNotEmpty()
     @IsInt()
@@ -74,14 +61,14 @@ class AutoDto extends BaseVehiculoDto{
     capacidadMaletero! : number;
 
     //-----Validacion Campos externos -----
-    /*
-    @IsEmpty({message : "Este no es un atributo del auto"})
-    capacidadCarga! : number;
-    */
+    
+    // @IsEmpty({message : "Este no es un atributo del auto"})
+    // capacidadCarga! : number;
+    
 
 }
 
-class MotocicletaDto extends BaseVehiculoDto{
+export class MotocicletaDto extends BaseVehiculoDto{
     @IsString()//Valida para evitar ataques SQL
     @IsNotEmpty()//No valores vacíos
     @Matches(/^[A-Z]{3}\d{3}[A-Z]$/, {message: 'La placa debe tern un formato válido. Ej: ABC123D'})
@@ -92,7 +79,7 @@ class MotocicletaDto extends BaseVehiculoDto{
     tipoMoto! : TipoMoto;
 }
 
-class CamionetaDto extends BaseVehiculoDto{
+export class CamionetaDto extends BaseVehiculoDto{
     @IsString()
     @IsNotEmpty()
     @Matches(/^(\bsimple\b|\bdoble\b)$/, {message : "La camioneta solo puede ser 'simple' o 'doble'"})

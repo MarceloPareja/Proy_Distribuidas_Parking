@@ -1,4 +1,4 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, Body, ConflictException, Injectable, NotFoundException, Param } from '@nestjs/common';
 import { CreateVehiculoDto } from './dto/create-vehiculo.dto';
 import { UpdateVehiculoDto } from './dto/update-vehiculo.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -6,6 +6,9 @@ import { Vehiculo } from './entities/vehiculo.entity';
 import { Repository } from 'typeorm';
 import { FactoryVehiculos } from 'src/factory.vehiculo';
 import { UUID } from 'crypto';
+import { plainToInstance } from 'class-transformer';
+import { map } from 'rxjs';
+import { notContains, validate } from 'class-validator';
 
 @Injectable()
 export class VehiculosService {
@@ -44,17 +47,21 @@ export class VehiculosService {
     );
 
     if(!existe){
-      throw new Error("Vehiculo no encontrado");
+      throw new NotFoundException("Vehiculo no encontrado");
     }
     return existe;
   }
 
-  update(id: string, updateVehiculoDto: UpdateVehiculoDto) {
-    //No se puede actualizar la placa.
+  async update(id: string, dto : UpdateVehiculoDto) {
+    const objVehiculo = await this.findOne(id);
+    const tipo = objVehiculo.obtenerTipo().toLowerCase();
 
-    return `This action updates a #${id} vehiculo`;
+    Object.assign(objVehiculo, dto);
+
+    return this.repositoryVehiculo.save(objVehiculo);
+    
+    
   }
-
   remove(id: number) {
     return `This action removes a #${id} vehiculo`;
   }
