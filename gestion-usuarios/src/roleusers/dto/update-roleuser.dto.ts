@@ -1,4 +1,8 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateRoleuserDto } from './create-roleuser.dto';
+import { IsBoolean, IsNotEmpty } from 'class-validator';
 
-export class UpdateRoleuserDto extends PartialType(CreateRoleuserDto) {}
+export class UpdateRoleuserDto {
+  @IsNotEmpty({ message: 'El campo active es obligatorio para actualizar' })
+  @IsBoolean({ message: 'active debe ser un valor booleano' })
+  active!: boolean;
+}
+

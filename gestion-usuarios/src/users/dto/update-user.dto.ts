@@ -15,7 +15,7 @@ export class UpdateUserDto {
   active?: boolean;
 
   @IsOptional()
-  @IsDateString({}, { message: 'last_login debe ser una fecha válida en formato ISO 8601' })
+  @IsDateString({}, { message: 'last_login debe ser una fecha válida' })
   last_login?: string;
 
   @IsOptional()
