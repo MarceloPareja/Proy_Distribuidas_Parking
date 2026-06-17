@@ -75,7 +75,7 @@ export class RolesService {
 
     Object.assign(role, updateRoleDto);
 
-    if(updateRoleDto.active == false){
+    if(updateRoleDto.active === false){
       this.eventEmitter.emit(RoleDeactivatedEvent.name, new RoleDeactivatedEvent(role.id));
     }
     return this.roleRepository.save(role);
