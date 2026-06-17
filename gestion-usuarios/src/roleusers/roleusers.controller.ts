@@ -25,6 +25,11 @@ export class RoleusersController {
     return this.roleusersService.findByUser(id_user);
   }
 
+  @Get('role/:role_name')
+  findByRole(@Param('role_name', ParseUUIDPipe) role_name: string) {
+    return this.roleusersService.findByRole(role_name);
+  }
+
   // GET /roleusers/:id_user/:id_role  — una asignación específica
   @Get(':id_user/:id_role')
   findOne(
@@ -35,13 +40,20 @@ export class RoleusersController {
   }
 
   // PATCH /roleusers/:id_user/:id_role  { active: boolean }
-  @Patch(':id_user/:id_role')
-  update(
+  @Patch('/activate/:id_user/:id_role')
+  activate(
+    @Param('id_user', ParseUUIDPipe) id_user: string,
+    @Param('id_role', ParseUUIDPipe) id_role: string
+  ) {
+    return this.roleusersService.activate(id_user, id_role);
+  }
+
+  @Patch('/deactivate/:id_user/:id_role')
+  deactivate(
     @Param('id_user', ParseUUIDPipe) id_user: string,
     @Param('id_role', ParseUUIDPipe) id_role: string,
-    @Body() updateRoleuserDto: UpdateRoleuserDto,
   ) {
-    return this.roleusersService.update(id_user, id_role, updateRoleuserDto);
+    return this.roleusersService.deactivate(id_user, id_role);
   }
 
   // DELETE /roleusers/:id_user/:id_role

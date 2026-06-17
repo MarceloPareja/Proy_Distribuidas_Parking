@@ -10,7 +10,4 @@ import {
 import { CreateRoleDto } from './create-role.dto';
 
 export class UpdateRoleDto extends PartialType(CreateRoleDto) {
-  @IsOptional()
-  @IsBoolean()
-  active?: boolean;
 }

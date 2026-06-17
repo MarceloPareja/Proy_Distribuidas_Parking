@@ -106,7 +106,7 @@ export class UsersService {
   }
 
   async findAll(): Promise<User[]> {
-    return this.userRepository.find({ relations: { persona: true } });
+    return this.userRepository.find();
   }
 
   async findOne(id: string): Promise<User> {
@@ -151,14 +151,24 @@ export class UsersService {
       );
     }
 
-    if(updateUserDto.active === false){
-      this.eventEmitter.emit(UserDeactivatedEvent.name, new UserDeactivatedEvent( user.id));
-    }
-
     Object.assign(user, updateUserDto);
     user.updated_at = new Date();
     return this.userRepository.save(user);
   }
+
+   async activate(id : string){
+    const user = await this.findOne(id);
+    user.active = true;
+    return this.userRepository.save(user);
+  }
+
+  async deactivate(id : string){
+    const user = await this.findOne(id);
+    user.active = false;
+    this.eventEmitter.emit(UserDeactivatedEvent.name, new UserDeactivatedEvent( user.id));
+    return this.userRepository.save(user);
+  }
+
 
   async remove(id: string): Promise<{ message: string }> {
     const user = await this.findOne(id);

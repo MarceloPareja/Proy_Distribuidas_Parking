@@ -12,12 +12,7 @@ import {
 import { CreateUserDto } from './create-user.dto';
 
 export class UpdateUserDto extends PartialType(OmitType(CreateUserDto, ['id_person'] as const)){
-  //No permite cambiar el ID
-  
-  @IsOptional()
-  @IsBoolean()
-  active?: boolean;
-
+  //No permite cambiar el ID ni el activo
   @IsOptional()
   @IsDateString({}, { message: 'last_login debe ser una fecha válida' })
   last_login?: string;

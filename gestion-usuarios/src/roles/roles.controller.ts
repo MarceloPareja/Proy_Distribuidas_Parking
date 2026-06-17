@@ -22,6 +22,22 @@ export class RolesController {
     return this.rolesService.findOne(id);
   }
 
+  @Get('/name/:name')
+  findByName(@Param('name') name: string){
+    return this.rolesService.findByName(name);
+  }
+
+   @Patch('/activate/:id')
+  activate(@Param('id') id: string) {
+    return this.rolesService.activate(id);
+  }
+
+  @Patch('/deactivate/:id')
+  deactivate(@Param('id') id: string) {
+    return this.rolesService.deactivate(id);
+  }
+  
+
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,

@@ -4,7 +4,7 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { ILike, Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
@@ -55,7 +55,15 @@ export class RolesService {
   }
 
   async findByName(name: string): Promise<Role | null> {
-    return this.roleRepository.findOne({ where: { name } });
+    const normalizedName = name.toLowerCase();
+    const role = await this.roleRepository.findOne({
+      where: { name: ILike(name) },
+      relations: { userRoles: true },
+    });
+    if (!role) {
+      throw new NotFoundException(`Rol "${name}" no encontrado`);
+    }
+    return role;
   }
 
   async update(id: string, updateRoleDto: UpdateRoleDto): Promise<Role> {
@@ -75,11 +83,23 @@ export class RolesService {
 
     Object.assign(role, updateRoleDto);
 
-    if(updateRoleDto.active === false){
-      this.eventEmitter.emit(RoleDeactivatedEvent.name, new RoleDeactivatedEvent(role.id));
-    }
+   
     return this.roleRepository.save(role);
   }
+
+   async activate(id : string){
+    const role = await this.findOne(id);
+    role.active = true;
+    return this.roleRepository.save(role);
+  }
+
+  async deactivate(id : string){
+    const role = await this.findOne(id);
+    role.active = false;
+    this.eventEmitter.emit(RoleDeactivatedEvent.name, new RoleDeactivatedEvent(role.id));
+    return this.roleRepository.save(role);
+  }
+
 
   async remove(id: string): Promise<{ message: string }> {
     const role = await this.findOne(id);

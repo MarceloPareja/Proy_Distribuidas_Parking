@@ -23,13 +23,13 @@ export class RoleusersService {
 
   async create(createRoleuserDto: CreateRoleuserDto): Promise<UserRole> {
     const userExists = await this.userService.findOne(createRoleuserDto.id_user);
-    const roleExists = await this.roleService.findOne(createRoleuserDto.id_role);
+    const roleExists = await this.roleService.findByName(createRoleuserDto.role_name);
     if (!userExists.active) throw new ForbiddenException("El usuario está inactivo. No se le puede asignar ningún rol.");
-    if(!roleExists.active) throw new ForbiddenException("El rol ha sido desactivado, no se puede asignar.");
+    if(!roleExists?.active) throw new ForbiddenException("El rol ha sido desactivado, no se puede asignar.");
     const existing = await this.userRoleRepository.findOne({
       where: {
         id_user: createRoleuserDto.id_user,
-        id_role: createRoleuserDto.id_role,
+        id_role: roleExists.id,
       },
     });
     if (existing) {
@@ -40,15 +40,14 @@ export class RoleusersService {
 
     const userRole = new UserRole();
     Object.assign(userRole, createRoleuserDto);
+    userRole.id_role = roleExists.id;
     userRole.active = true;
 
     return this.userRoleRepository.save(userRole);
   }
 
   async findAll(): Promise<UserRole[]> {
-    return this.userRoleRepository.find({
-      relations: { user: true, role: true },
-    });
+    return this.userRoleRepository.find();
   }
 
   async findOne(id_user: string, id_role: string): Promise<UserRole> {
@@ -78,20 +77,22 @@ export class RoleusersService {
     });
   }
 
-  async update(
-    id_user: string,
-    id_role: string,
-    updateRoleuserDto: UpdateRoleuserDto,
-  ): Promise<UserRole> {
-    //Solo se puede modificar la asifnación a verdadero o falso
+   async activate(id_user : string, id_role : string){
     const userRole = await this.findOne(id_user, id_role);
     const userExists = await this.userService.findOne(id_user);
     const roleExists = await this.roleService.findOne(id_role);
-    if (!userExists.active && updateRoleuserDto.active) throw new ForbiddenException("El usuario está inactivo. No se puede reactivar la asignación.");
-    if(!roleExists.active && updateRoleuserDto.active) throw new ForbiddenException("El rol ha sido desactivado, no se puede reactivar la asignación.");
-    userRole.active = updateRoleuserDto.active;
+    if(!userExists.active) throw new ForbiddenException("El usuario está inactivo. No se puede reactivar la asignación.");
+    if(!roleExists.active) throw new ForbiddenException("El rol ha sido desactivado, no se puede reactivar la asignación.");
+    userRole.active = true;
     return this.userRoleRepository.save(userRole);
   }
+
+  async deactivate(id_user : string, id_role : string){
+    const assignation = await this.findOne(id_user, id_role);
+    assignation.active = true;
+    return this.userRoleRepository.save(assignation);
+  }
+
 
   async deactivateByUser(user_id : string){
     const assignations = await this.findByUser(user_id);

@@ -31,4 +31,15 @@ export class PersonasController {
   update(@Param('id') id: string, @Body() updatePersonaDto: UpdatePersonaDto) {
     return this.personasService.update(id, updatePersonaDto);
   }
+
+  @Patch('/activate/:id')
+  activate(@Param('id') id: string) {
+    return this.personasService.activate(id);
+  }
+
+  @Patch('/deactivate/:id')
+  deactivate(@Param('id') id: string) {
+    return this.personasService.deactivate(id);
+  }
+
 }

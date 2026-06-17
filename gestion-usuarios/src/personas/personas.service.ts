@@ -138,7 +138,6 @@ export class PersonasService {
 
     // Mapear campos del DTO a la entidad
     const updateData: Partial<Persona> = {
-      ...(updatePersonaDto.activo !== undefined && { activo: updatePersonaDto.activo }),
       ...(updatePersonaDto.address !== undefined && { address: updatePersonaDto.address }),
       ...(updatePersonaDto.email && { email: updatePersonaDto.email }),
       ...(updatePersonaDto.firstName && { first_name: updatePersonaDto.firstName }),
@@ -152,6 +151,20 @@ export class PersonasService {
     persona.updated_at = new Date();
     return this.personaRepository.save(persona);
   }
+
+  async activate(id : string){
+    const persona = await this.findOne(id);
+    persona.activo = true;
+    return this.userRepository.save(persona);
+  }
+
+  async deactivate(id : string){
+    const persona = await this.findOne(id);
+    persona.activo = false;
+    return this.userRepository.save(persona);
+  }
+
+  
 
   async remove(id: string): Promise<{ message: string }> {
     const persona = await this.findOne(id);
