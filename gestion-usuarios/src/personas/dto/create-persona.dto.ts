@@ -10,9 +10,8 @@ import {
 } from 'class-validator';
 
 export class CreatePersonaDto {
-  @IsOptional()
-  @IsBoolean()
-  activo?: boolean;
+
+  //Al crear siempre se crea como active
 
   @IsOptional()
   @IsString()
@@ -58,11 +57,14 @@ export class CreatePersonaDto {
   @IsString()
   @IsNotEmpty({ message: 'La nacionalidad es obligatoria' })
   @MaxLength(30, { message: 'La nacionalidad no puede tener más de 30 caracteres' })
+  @MinLength(3, {message : "La nacionalidad no puede tener menos de 3 caracteres"})
+  @Matches(/^[A-Za-záéíóúÁÉÍÓÚäëïöü\s]+$/, {message: "La nacionalidad solo puede contener espacios y letras"})
   nationality!: string;
 
   @IsString()
   @IsNotEmpty({ message: 'El teléfono es obligatorio' })
-  @MaxLength(17, { message: 'El teléfono no puede tener más de 17 caracteres' })
+  @MaxLength(17, { message: 'El teléfono no puede tener más de 17 dígitos' })
+  @MinLength(5, {message : "El número de teléfono no puede tener menos de 5 dígitos"})
   @Matches(/^\+?[0-9\s-]+$/, {
     message: 'El teléfono solo puede contener números, espacios, + y -',
   })

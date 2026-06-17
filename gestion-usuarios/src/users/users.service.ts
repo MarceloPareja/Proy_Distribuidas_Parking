@@ -9,6 +9,7 @@ import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcrypt from 'bcrypt';
+import { Persona } from 'src/personas/entities/persona.entity';
 
 @Injectable()
 export class UsersService {
@@ -62,6 +63,19 @@ export class UsersService {
     }
   }
 
+   async createUserFromPersona(datosPersona: Persona){
+      const username = await this.generateUsername(datosPersona.first_name, datosPersona.last_name, datosPersona.middle_name);
+      
+   
+
+      const dto = new CreateUserDto();
+      dto.id_person = datosPersona.id;
+      dto.password_hash = datosPersona.dni;// Contraseña inicial = DNI hasheado
+      dto.username = username;
+
+      return await this.create(dto);
+    }
+
   async create(createUserDto: CreateUserDto): Promise<User> {
     const existing = await this.userRepository.findOne({
       where: { username: createUserDto.username },
@@ -78,10 +92,10 @@ export class UsersService {
       saltRounds,
     );
 
-    const user = this.userRepository.create({
-      ...createUserDto,
-      password_hash: hashedPassword,
-    });
+    const user = new User();
+    Object.assign(user, createUserDto);
+    user.created_at = new Date();
+    user.password_hash = hashedPassword;
 
     return this.userRepository.save(user);
   }

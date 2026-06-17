@@ -63,7 +63,7 @@ export class PersonasService {
     try {
       // 1. Crear la persona
       const persona = queryRunner.manager.create(Persona, {
-        activo: createPersonaDto.activo ?? true,
+        activo: true,
         address: createPersonaDto.address,
         dni: createPersonaDto.dni,
         email: createPersonaDto.email,
@@ -74,21 +74,15 @@ export class PersonasService {
         phone: createPersonaDto.phone,
       });
 
+      //Crear y guardar la persona
       const savedPersona = await queryRunner.manager.save(Persona, persona);
-
-      // 2. Crear el usuario vinculado a la persona
-      const user = queryRunner.manager.create(User, {
-        username,
-        password_hash,
-        id_person: savedPersona.id,
-        active: true,
-      });
-
-      const savedUser = await queryRunner.manager.save(User, user);
-
       await queryRunner.commitTransaction();
 
-      return { persona: savedPersona, user: savedUser };
+      // 2. Crear el usuario vinculado a la persona
+      const createdUser = await this.usersService.createUserFromPersona(savedPersona);
+
+
+      return { persona: savedPersona, user: createdUser };
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -127,10 +121,11 @@ export class PersonasService {
     const persona = await this.findOne(id);
 
     // Verificar unicidad si se actualizan campos únicos
-    if (updatePersonaDto.dni && updatePersonaDto.dni !== persona.dni) {
-      const exists = await this.personaRepository.findOne({ where: { dni: updatePersonaDto.dni } });
-      if (exists) throw new ConflictException(`El DNI "${updatePersonaDto.dni}" ya está registrado`);
-    }
+    //El dni por ahora no se actualiza
+    // if (updatePersonaDto.dni && updatePersonaDto.dni !== persona.dni) {
+    //   const exists = await this.personaRepository.findOne({ where: { dni: updatePersonaDto.dni } });
+    //   if (exists) throw new ConflictException(`El DNI "${updatePersonaDto.dni}" ya está registrado`);
+    // }
     if (updatePersonaDto.email && updatePersonaDto.email !== persona.email) {
       const exists = await this.personaRepository.findOne({ where: { email: updatePersonaDto.email } });
       if (exists) throw new ConflictException(`El email "${updatePersonaDto.email}" ya está registrado`);
@@ -144,11 +139,10 @@ export class PersonasService {
     const updateData: Partial<Persona> = {
       ...(updatePersonaDto.activo !== undefined && { activo: updatePersonaDto.activo }),
       ...(updatePersonaDto.address !== undefined && { address: updatePersonaDto.address }),
-      ...(updatePersonaDto.dni && { dni: updatePersonaDto.dni }),
       ...(updatePersonaDto.email && { email: updatePersonaDto.email }),
-      ...(updatePersonaDto.first_name && { first_name: updatePersonaDto.first_name }),
-      ...(updatePersonaDto.last_name && { last_name: updatePersonaDto.last_name }),
-      ...(updatePersonaDto.middle_name !== undefined && { middle_name: updatePersonaDto.middle_name }),
+      ...(updatePersonaDto.firstName && { first_name: updatePersonaDto.firstName }),
+      ...(updatePersonaDto.lastName && { last_name: updatePersonaDto.lastName }),
+      ...(updatePersonaDto.middleName !== undefined && { middle_name: updatePersonaDto.middleName }),
       ...(updatePersonaDto.nationality && { nationality: updatePersonaDto.nationality }),
       ...(updatePersonaDto.phone && { phone: updatePersonaDto.phone }),
     };

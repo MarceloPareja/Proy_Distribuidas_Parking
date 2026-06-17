@@ -11,13 +11,16 @@ import {
 } from 'class-validator';
 
 export class CreateUserDto {
-  @IsOptional()
-  @IsBoolean()
-  active?: boolean;
 
-  @IsOptional()
-  @IsDateString({}, { message: 'last_login debe ser una fecha válida en formato ISO 8601' })
-  last_login?: string;
+  //El estado empieza como activo, no tiene mucho sentido crear un usuario desactivado
+  // @IsOptional()
+  // @IsBoolean()
+  // active?: boolean;
+
+  //Last login debería cambiarse cuando el usuario ajuste datos y luego inicie sesión. No se crea con él.
+  // @IsOptional()
+  // @IsDateString({}, { message: 'last_login debe ser una fecha válida' })
+  // last_login?: string;
 
   @IsString()
   @IsNotEmpty({ message: 'La contraseña es obligatoria' })
