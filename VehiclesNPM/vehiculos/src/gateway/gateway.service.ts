@@ -65,18 +65,26 @@ export class GatewayService {
 
     const creado = await this.vehiculosService.create(dto.vehiculo);
 
-    await this.validarCupoSiAplica(creado.obtenerTipo(), dto.permitirSinValidarCupo);
+    try {
+      await this.validarCupoSiAplica(creado.obtenerTipo(), dto.permitirSinValidarCupo);
+      const actualizado = await this.vehiculosService.marcarIngreso(creado);
 
-    const actualizado = await this.vehiculosService.marcarIngreso(creado);
-
-    return {
-      autorizado: true,
-      vehiculoId: actualizado.id,
-      placa: actualizado.placa,
-      tipo: actualizado.obtenerTipo(),
-      clasificacion: actualizado.clasificacion,
-      fechaIngreso: actualizado.fechaUltimoIngreso,
-    };
+      return {
+        autorizado: true,
+        vehiculoId: actualizado.id,
+        placa: actualizado.placa,
+        tipo: actualizado.obtenerTipo(),
+        clasificacion: actualizado.clasificacion,
+        fechaIngreso: actualizado.fechaUltimoIngreso,
+      };
+    } catch (error) {
+      // CONFLICTO DETECTADO: si la validación de cupo o el ingreso
+      // fallan después de crear el vehículo, no debe quedar un registro
+      // huérfano (creado pero nunca ingresado). Como todavía no existe
+      // ningún ticket que lo referencie, es seguro revertir la creación.
+      await this.vehiculosService.eliminarFisico(creado.id);
+      throw error;
+    }
   }
 
   async autorizarSalida(dto: SalidaDto) {

@@ -9,11 +9,14 @@ import { UUID } from 'crypto';
 import { plainToInstance } from 'class-transformer';
 import { map } from 'rxjs';
 import { notContains, validate } from 'class-validator';
+import { PersonasClientService } from './personas-client.service';
 
 @Injectable()
 export class VehiculosService {
   constructor(@InjectRepository(Vehiculo)
-    private repositoryVehiculo: Repository<Vehiculo>,){
+    private repositoryVehiculo: Repository<Vehiculo>,
+    private personasClientService: PersonasClientService,
+    ){
     }
 
   async create(createVehiculoDto: CreateVehiculoDto) {
@@ -22,15 +25,52 @@ export class VehiculosService {
         placa: createVehiculoDto.datos.placa
       }
     });
-    if(existe)
-    {
+
+    // CONFLICTO DETECTADO: remove() hace baja lógica (activo=false), pero
+    // la placa sigue siendo unique en la BD. Sin este chequeo, una placa
+    // dada de baja quedaría bloqueada para siempre y nunca podría
+    // volver a registrarse, ni con el mismo dueño ni con uno nuevo.
+    if (existe && !existe.activo) {
+      throw new ConflictException(
+        'Existe un vehículo dado de baja con esa placa. Reactívelo en vez de crear uno nuevo.',
+      );
+    }
+    if (existe) {
       throw new ConflictException("Ya existe un vehículo con esa placa");
+    }
+
+    if (createVehiculoDto.idPropietario) {
+      const personaExiste = await this.personasClientService.existePersona(createVehiculoDto.idPropietario);
+      if (!personaExiste) {
+        throw new NotFoundException('El propietario indicado no existe en gestion-usuarios');
+      }
     }
 
     const vehiculo = FactoryVehiculos.crear(createVehiculoDto);
 
     return this.repositoryVehiculo.save(vehiculo);
 
+  }
+
+  //Reactiva un vehículo dado de baja lógicamente, conservando su historial
+  //(mismo id, mismos tickets pasados). Opcionalmente reasigna propietario.
+  async reactivar(id: string, idPropietario?: string) {
+    const vehiculo = await this.findOne(id);
+
+    if (vehiculo.activo) {
+      throw new ConflictException('El vehículo ya está activo');
+    }
+
+    if (idPropietario) {
+      const personaExiste = await this.personasClientService.existePersona(idPropietario);
+      if (!personaExiste) {
+        throw new NotFoundException('El propietario indicado no existe en gestion-usuarios');
+      }
+      vehiculo.idPropietario = idPropietario;
+    }
+
+    vehiculo.activo = true;
+    return this.repositoryVehiculo.save(vehiculo);
   }
 
   async findAll() {
@@ -98,9 +138,22 @@ export class VehiculosService {
     return this.repositoryVehiculo.save(vehiculo);
   }
 
+  //Vehículos de una persona — útil para "mis vehículos" en una app,
+  //o para que facturación sepa qué cobrarle a quién.
+  async findByPropietario(idPropietario: string) {
+    return this.repositoryVehiculo.find({ where: { idPropietario } });
+  }
+
   async update(id: string, dto : UpdateVehiculoDto) {
     const objVehiculo = await this.findOne(id);
     const tipo = objVehiculo.obtenerTipo().toLowerCase();
+
+    if (dto.idPropietario) {
+      const personaExiste = await this.personasClientService.existePersona(dto.idPropietario);
+      if (!personaExiste) {
+        throw new NotFoundException('El propietario indicado no existe en gestion-usuarios');
+      }
+    }
 
     Object.assign(objVehiculo, dto);
 
@@ -120,5 +173,13 @@ export class VehiculosService {
 
     vehiculo.activo = false;
     return this.repositoryVehiculo.save(vehiculo);
+  }
+
+  //Borrado físico real, de uso interno: solo lo usa el gateway para
+  //compensar un registro walk-in que falló justo después de crearse
+  //(antes de que exista cualquier ticket que lo referencie). NUNCA
+  //exponer esto en un endpoint público.
+  async eliminarFisico(id: string) {
+    await this.repositoryVehiculo.delete(id);
   }
 }

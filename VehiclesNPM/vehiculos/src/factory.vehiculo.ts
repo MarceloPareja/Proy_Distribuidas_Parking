@@ -7,24 +7,25 @@ import { BadRequestException } from "@nestjs/common";
 
 export class FactoryVehiculos {
   static crear(dto: CreateVehiculoDto): Vehiculo {
+    let vehiculo: Vehiculo;
     switch (dto.tipo.toLowerCase()) {
       case 'auto':
-        const auto = new Auto();
-        Object.assign(auto, dto.datos);
-        return auto;
+        vehiculo = new Auto();
+        Object.assign(vehiculo, dto.datos);
+        break;
       case 'motocicleta':
-        const moto = new Motocicleta();
-        Object.assign(moto, dto.datos);
-        return moto;
+        vehiculo = new Motocicleta();
+        Object.assign(vehiculo, dto.datos);
+        break;
       case 'camioneta':
-        const camion = new Camioneta();
-        Object.assign(camion, dto.datos);
-        return camion;
+        vehiculo = new Camioneta();
+        Object.assign(vehiculo, dto.datos);
+        break;
       default:
         throw new BadRequestException(`Tipo de vehículo no soportado: ${dto.tipo}`);
     }
+    vehiculo.idPropietario = dto.idPropietario ?? null;
+    return vehiculo;
   }
-
-  
 
 }

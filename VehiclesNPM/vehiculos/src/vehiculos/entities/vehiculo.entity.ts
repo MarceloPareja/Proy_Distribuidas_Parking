@@ -56,5 +56,12 @@ export abstract class Vehiculo {
     @Column({default : true})
     activo!: boolean;
 
+    //Referencia al propietario en el microservicio gestion-usuarios.
+    //NO es una FK de base de datos (son servicios y bases distintas):
+    //es solo un UUID que se valida vía HTTP contra ese servicio.
+    //Opcional: admite vehículos de visitantes sin dueño registrado.
+    @Column({type : 'uuid', nullable : true})
+    idPropietario!: string | null;
+
     abstract obtenerTipo(): string;
 }

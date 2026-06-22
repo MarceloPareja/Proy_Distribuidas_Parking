@@ -1,4 +1,4 @@
-import { IsInt, IsNotEmpty, IsNumber, IsPositive, IsString, Matches, Max, MaxDate, MaxLength, Min, MinLength, IsIn, ValidateNested, Validate, IsEmpty, IsEnum } from "class-validator";
+import { IsInt, IsNotEmpty, IsNumber, IsPositive, IsString, Matches, Max, MaxDate, MaxLength, Min, MinLength, IsIn, ValidateNested, Validate, IsEmpty, IsEnum, IsOptional, IsUUID } from "class-validator";
 import { Type } from "class-transformer";
 import { ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 import { TipoMoto } from "../entities/motocicleta.entity";
@@ -142,6 +142,13 @@ export class CreateVehiculoDto {
   @ApiProperty({description: "Tipo de vehículo",example: "Auto", enum: ['Auto', 'Motocicleta', 'Camioneta']})
   @IsIn(['Auto', 'Motocicleta', 'Camioneta'])
   tipo!: string;
+
+  // Referencia al dueño en gestion-usuarios (Persona). Opcional: admite
+  // vehículos de visitantes walk-in sin dueño registrado. Se valida su
+  // existencia vía HTTP en VehiculosService.create(), no es una FK real.
+  @IsOptional()
+  @IsUUID()
+  idPropietario?: string;
 
   @ValidateNested()
   @Type((opts) => {

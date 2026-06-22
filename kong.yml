@@ -43,6 +43,10 @@ services:
         paths:
           - /api/vehiculos
         strip_path: false
+      - name: vehiculos-gateway-route
+        paths:
+          - /api/gateway
+        strip_path: false
 
   - name: gestion-usuarios-service
     url: http://host.docker.internal:3001
@@ -59,3 +63,14 @@ services:
         paths:
           - /docs/usuarios
         strip_path: true
+
+
+
+# Consumer autorizado a llamar /api/vehiculos y /api/gateway.
+# La key de ejemplo es solo para desarrollo local: en un ambiente real
+# no se commitea en texto plano (usar variables de entorno / secret
+# manager y generar la credencial vía la Admin API de Kong, no aquí).
+consumers:
+  - username: sistema-tickets
+    keyauth_credentials:
+      - key: a387bf883d646b96d8e48490c2e6329da7258548a2d16c1f45f39ecbef7031d7

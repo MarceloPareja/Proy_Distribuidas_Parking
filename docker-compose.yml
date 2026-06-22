@@ -1,9 +1,49 @@
 version: '3.8'
 
 services:
+  db-vehiculos:
+    image: postgres:16-alpine
+    container_name: db-vehiculos
+    environment:
+      POSTGRES_USER: vehiculos
+      POSTGRES_PASSWORD: vehiculos
+      POSTGRES_DB: vehiculos
+    volumes:
+      - db-vehiculos-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vehiculos"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  vehiculos:
+    build:
+      context: ./VehiclesNPM/vehiculos
+    container_name: vehiculos-service
+    environment:
+      PORT: 3000
+      DB_HOST: db-vehiculos
+      DB_PORT: 5432
+      DB_USUARIO: vehiculos
+      DB_CONTRASENA: vehiculos
+      DB_NOMBRE: vehiculos
+      ZONAS_SERVICE_URL: http://host.docker.internal:8080
+      GESTION_USUARIOS_URL: http://host.docker.internal:3001
+    extra_hosts:
+      # host.docker.internal solo se resuelve solo en Docker Desktop
+      # (Mac/Windows). En Linux hace falta este mapeo explícito.
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      db-vehiculos:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+
   kong:
     image: kong:latest
     container_name: kong-gateway
+    depends_on:
+      - vehiculos
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /opt/kong/kong.yml
@@ -26,3 +66,6 @@ services:
       - "8081:8080"
     environment:
       URLS: '[{ "url": "http://localhost:8000/docs/usuarios", "name": "API Usuarios" }]'
+
+volumes:
+  db-vehiculos-data:

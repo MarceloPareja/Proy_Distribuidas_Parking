@@ -1,6 +1,6 @@
 import { OmitType, PartialType } from '@nestjs/mapped-types';
 import { AutoDto, BaseVehiculoDto, CamionetaDto, CreateVehiculoDto, MotocicletaDto } from './create-vehiculo.dto';
-import { IsInt, IsNotEmpty, IsNumber, IsString, Matches, Max, MaxLength, Min, MinLength, IsIn, ValidateNested, Validate, IsEmpty, IsEnum, IsOptional } from "class-validator";
+import { IsInt, IsNotEmpty, IsNumber, IsString, Matches, Max, MaxLength, Min, MinLength, IsIn, ValidateNested, Validate, IsEmpty, IsEnum, IsOptional, IsUUID } from "class-validator";
 import { MaxYearConstraint } from '../utils/validators';
 import { Clasificacion } from '../entities/vehiculo.entity';
 import { Type } from 'class-transformer';
@@ -74,7 +74,13 @@ export abstract class UpdateVehiculoDto extends PartialType(OmitType(BaseVehicul
     @ApiProperty()
     @IsEmpty({ message: "No se puede cambiar el año" })
     declare anio?: number;
-    
+
+    // Reasignación de propietario (ej. venta del vehículo a otra persona).
+    // Se valida su existencia en gestion-usuarios en VehiculosService.update().
+    @IsOptional()
+    @IsUUID()
+    idPropietario?: string;
+
 }
 
 //Recicla la estructura pero mantiene la herencia
