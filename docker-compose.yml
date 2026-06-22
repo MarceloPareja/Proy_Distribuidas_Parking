@@ -53,6 +53,20 @@ services:
 
   # ─────────────── MICROSERVICIOS ───────────────
 
+  zonas:
+    build:
+      context: ./ModuloZonas
+    container_name: zonas-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-zonas:5432/test
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: 12345
+    depends_on:
+      db-zonas:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+
   vehiculos:
     build:
       context: ./VehiclesNPM/vehiculos
@@ -99,6 +113,7 @@ services:
     depends_on:
       - vehiculos
       - gestion-usuarios
+      - zonas
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /opt/kong/kong.yml
@@ -123,7 +138,8 @@ services:
       URLS: >-
         [
           { "url": "http://localhost:8000/docs/vehiculos", "name": "Vehiculos" },
-          { "url": "http://localhost:8000/docs/usuarios", "name": "Usuarios" }
+          { "url": "http://localhost:8000/docs/usuarios", "name": "Usuarios" },
+          { "url": "http://localhost:8000/docs/zonas", "name": "Zonas" }
         ]
 
 volumes:

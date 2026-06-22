@@ -28,14 +28,22 @@ plugins:
       max_age: 3600
 
 services:
-  # Spring Boot corre FUERA de Docker, así que usa host.docker.internal
+  # Zonas corre DENTRO de Docker, usamos el nombre "zonas"
   - name: zonas-espacios-service
-    url: http://host.docker.internal:8080
+    url: http://zonas:8080
     routes:
       - name: zonas-espacios-route
         paths:
           - /api/zonas
         strip_path: false
+
+  - name: zonas-docs-service
+    url: http://zonas:8080/v3/api-docs
+    routes:
+      - name: zonas-docs-route
+        paths:
+          - /docs/zonas
+        strip_path: true
 
   # Vehículos corre DENTRO de Docker, usamos el nombre del contenedor "vehiculos"
   - name: vehiculos-service
