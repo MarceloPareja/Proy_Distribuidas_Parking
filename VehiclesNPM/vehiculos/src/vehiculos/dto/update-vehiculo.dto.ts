@@ -59,19 +59,18 @@ export class UpdateVehiculoPipe implements PipeTransform {
 
 export abstract class UpdateVehiculoDto extends PartialType(OmitType(BaseVehiculoDto, ['placa'] as const)){
     //Omite la placa
-    @ApiProperty()
     @IsEmpty({message : "La placa no se puede modificar"})
     placa! : string;
 
-    @ApiProperty()
+
     @IsEmpty({message : "No se puede cambiar la marca"})
     declare marca?: string;
 
-    @ApiProperty()
+  
     @IsEmpty({message : "No se puede cambiar el modelo"})
     declare modelo?: string;
 
-    @ApiProperty()
+  
     @IsEmpty({ message: "No se puede cambiar el año" })
     declare anio?: number;
 

@@ -64,7 +64,7 @@ export class BaseVehiculoDto{
     anio! : number
 
     //Validacion de clasificacion
-    @ApiProperty({description: "Combustible del vehículo",example: "Eléctrico", enum: ['Eléctrico', 'Gasolina', 'Diésel']})
+    @ApiProperty({description: "Combustible del vehículo",example: "Electrico", enum: ['Electrico', 'Gasolina', 'Diesel', 'Hibrido']})
     @IsNotEmpty()
     @IsEnum(Clasificacion)
     clasificacion! : Clasificacion;
@@ -107,8 +107,8 @@ export class AutoDto extends BaseVehiculoDto{
 export class MotocicletaDto extends BaseVehiculoDto{
     @IsString()//Valida para evitar ataques SQL
     @IsNotEmpty()//No valores vacíos
-    @Matches(/^[A-Z]{3}\d{3}[A-Z]$/, {message: 'La placa debe tern un formato válido. Ej: ABC123D'})
-    @ApiProperty({description: "Placa de la motocicleta",example: "ABC123D"})
+    @Matches(/^[A-Z]{3}-\d{3}[A-Z]$/, {message: 'La placa debe tener un formato válido. Ej: AB-123D'})
+    @ApiProperty({description: "Placa de la motocicleta",example: "ABC-123D"})
     declare placa: string;
 
     @ApiProperty({description: "Tipo de motocicleta",example: "Deportiva", enum: ['Deportiva', 'Scooter', 'Motocross']})

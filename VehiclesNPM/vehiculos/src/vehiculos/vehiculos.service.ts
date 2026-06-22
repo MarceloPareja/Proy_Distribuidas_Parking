@@ -10,7 +10,9 @@ import { plainToInstance } from 'class-transformer';
 import { map } from 'rxjs';
 import { notContains, validate } from 'class-validator';
 import { PersonasClientService } from './personas-client.service';
+import { ApiExtraModels } from '@nestjs/swagger';
 
+@ApiExtraModels(Vehiculo)
 @Injectable()
 export class VehiculosService {
   constructor(@InjectRepository(Vehiculo)
