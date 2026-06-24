@@ -83,6 +83,15 @@ services:
           - /docs/usuarios
         strip_path: true
 
+  # Asignación y Trazabilidad corre DENTRO de Docker
+  - name: asignacion-trazabilidad-service
+    url: http://asignacion-trazabilidad:3002
+    routes:
+      - name: asignacion-trazabilidad-route
+        paths:
+          - /api/asignacion-trazabilidad
+        strip_path: false
+
 # Consumer autorizado a llamar /api/vehiculos y /api/gateway.
 consumers:
   - username: sistema-tickets

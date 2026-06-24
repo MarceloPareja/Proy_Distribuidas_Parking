@@ -51,6 +51,21 @@ services:
       timeout: 5s
       retries: 5
 
+  db-asignaciones:
+    image: postgres:16-alpine
+    container_name: db-asignaciones
+    environment:
+      POSTGRES_USER: asignaciones
+      POSTGRES_PASSWORD: asignaciones
+      POSTGRES_DB: asignaciones
+    volumes:
+      - db-asignaciones-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U asignaciones"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   # ─────────────── MICROSERVICIOS ───────────────
 
   zonas:
@@ -105,6 +120,24 @@ services:
     ports:
       - "3001:3001"
 
+  asignacion-trazabilidad:
+    build:
+      context: ./asignacion-trazabilidad
+    container_name: asignacion-trazabilidad-service
+    environment:
+      PORT: 3002
+      DB_HOST: db-asignaciones
+      DB_PORT: 5432
+      DB_USUARIO: asignaciones
+      DB_CONTRASENA: asignaciones
+      DB_NOMBRE: asignaciones
+      KONG_BASE_URL: http://kong:8000
+    depends_on:
+      db-asignaciones:
+        condition: service_healthy
+    ports:
+      - "3002:3002"
+
   # ─────────────── INFRAESTRUCTURA ───────────────
 
   kong:
@@ -114,6 +147,7 @@ services:
       - vehiculos
       - gestion-usuarios
       - zonas
+      - asignacion-trazabilidad
     environment:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /opt/kong/kong.yml
@@ -146,3 +180,4 @@ volumes:
   db-vehiculos-data:
   db-usuarios-data:
   db-zonas-data:
+  db-asignaciones-data:
