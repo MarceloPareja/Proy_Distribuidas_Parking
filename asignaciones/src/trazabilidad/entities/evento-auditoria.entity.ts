@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  Index,
 } from 'typeorm';
 
 /**
@@ -15,27 +16,33 @@ export enum TipoAccion {
 }
 
 /**
- * Entidad EventoAuditoria — registro inmutable de cada cambio en asignaciones.
+ * Entidad Auditoria — registro inmutable de cada cambio en asignaciones.
  *
  * Campos requeridos por RF2:
- *  - ID del evento (auto-generado)
- *  - Clave compuesta afectada (user_id + vehicle_id)
- *  - Tipo de acción (CREACIÓN / MODIFICACIÓN / ELIMINACIÓN)
- *  - Timestamp con zona horaria
- *  - Payload del cambio (datos anteriores vs. nuevos)
+ *  - id (uuid auto-generado)
+ *  - vehicle_id (uuid de la clave compuesta)
+ *  - user_id (uuid de la clave compuesta)
+ *  - accion (CREACIÓN / MODIFICACIÓN / ELIMINACIÓN)
+ *  - timestamp con zona horaria (auto-generado)
+ *  - payload (JSON con datos anteriores vs. nuevos)
+ *
+ * Tabla indexada para búsquedas rápidas por usuario y vehículo.
  */
-@Entity('eventos_auditoria')
-export class EventoAuditoria {
+@Entity('auditoria')
+@Index('IDX_auditoria_user_vehicle', ['userId', 'vehicleId'])
+@Index('IDX_auditoria_accion', ['accion'])
+@Index('IDX_auditoria_timestamp', ['timestamp'])
+export class Auditoria {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   /** user_id de la clave compuesta afectada */
-  @Column({ name: 'user_id' })
-  userId: number;
+  @Column({ name: 'user_id', type: 'uuid' })
+  userId: string;
 
   /** vehicle_id de la clave compuesta afectada */
-  @Column({ name: 'vehicle_id' })
-  vehicleId: number;
+  @Column({ name: 'vehicle_id', type: 'uuid' })
+  vehicleId: string;
 
   /** Tipo de acción: CREACION | MODIFICACION | ELIMINACION */
   @Column({
@@ -44,15 +51,11 @@ export class EventoAuditoria {
   })
   accion: TipoAccion;
 
-  /** Datos anteriores (null en creación) */
-  @Column({ name: 'datos_anteriores', type: 'jsonb', nullable: true })
-  datosAnteriores: Record<string, any> | null;
-
-  /** Datos nuevos (null en eliminación) */
-  @Column({ name: 'datos_nuevos', type: 'jsonb', nullable: true })
-  datosNuevos: Record<string, any> | null;
+  /** Payload del cambio: objeto JSON con información del evento */
+  @Column({ type: 'jsonb', nullable: true })
+  payload: Record<string, any> | null;
 
   /** Timestamp con zona horaria — se genera automáticamente */
-  @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
-  createdAt: Date;
+  @CreateDateColumn({ name: 'timestamp', type: 'timestamptz' })
+  timestamp: Date;
 }

@@ -122,7 +122,7 @@ services:
 
   asignacion-trazabilidad:
     build:
-      context: ./asignacion-trazabilidad
+      context: ./asignaciones
     container_name: asignacion-trazabilidad-service
     environment:
       PORT: 3002

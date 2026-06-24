@@ -12,6 +12,7 @@ import {
  *
  * ─── Diseño de clave ───
  * Clave compuesta: (user_id, vehicle_id)
+ * Ambos son UUIDs validados en los microservicios de Usuarios y Vehículos.
  * Esto garantiza que la misma combinación usuario-vehículo no pueda existir
  * dos veces en la tabla, permitiendo trazabilidad al reactivar/desactivar.
  *
@@ -26,11 +27,11 @@ import {
   where: '"activo" = true',
 })
 export class Asignacion {
-  @PrimaryColumn({ name: 'user_id' })
-  userId: number;
+  @PrimaryColumn({ name: 'user_id', type: 'uuid' })
+  userId: string;
 
-  @PrimaryColumn({ name: 'vehicle_id' })
-  vehicleId: number;
+  @PrimaryColumn({ name: 'vehicle_id', type: 'uuid' })
+  vehicleId: string;
 
   /** Estado de la asignación — permite eliminación lógica y control de unicidad activa */
   @Column({ default: true })

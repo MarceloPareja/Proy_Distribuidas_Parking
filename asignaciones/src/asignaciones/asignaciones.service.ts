@@ -3,20 +3,22 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
-  Inject,
   Logger,
-  Scope,
 } from '@nestjs/common';
-import { REQUEST } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Request } from 'express';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Asignacion } from './entities/asignacion.entity';
 import { CreateAsignacionDto } from './dto/create-asignacion.dto';
 import { CreateAsignacionBatchDto } from './dto/create-asignacion-batch.dto';
 import { UpdateAsignacionDto } from './dto/update-asignacion.dto';
 import { UsuariosClient } from '../clients/usuarios.client';
 import { VehiculosClient } from '../clients/vehiculos.client';
+import {
+  AsignacionCreadaEvent,
+  AsignacionModificadaEvent,
+  AsignacionEliminadaEvent,
+} from './asignaciones.events';
 
 /**
  * Servicio de Asignaciones — lógica de negocio para RF1 + RF2.
@@ -26,31 +28,23 @@ import { VehiculosClient } from '../clients/vehiculos.client';
  *   Esta restricción se valida aquí (nivel de servicio) y se refuerza en BD
  *   con un índice único parcial (UQ_vehicle_activo).
  *
- * ─── Validación de existencia (FASE 4) ───
+ * ─── Validación de existencia ───
  *   Antes de crear una asignación, se verifica que el userId y vehicleId
  *   existan realmente consultando los microservicios de Usuarios y Vehículos
  *   a través de Kong. Si alguno no existe, se lanza la excepción de dominio
- *   correspondiente (UsuarioNoEncontradoException / VehiculoNoEncontradoException).
+ *   correspondiente.
  *
- * ─── Trazabilidad: patrón req['__datosAnteriores'] ───
- *   Para que el TrazabilidadInterceptor pueda capturar el estado anterior
- *   del registro ANTES de que se mute, el service carga ese estado y lo
- *   adjunta al objeto request como `req['__datosAnteriores']`.
- *
- *   ¿Por qué en el service y no en el interceptor?
- *     → El interceptor se ejecuta ANTES del handler (pre-handler) y DESPUÉS
- *       (post-handler via tap), pero no tiene acceso al repositorio de
- *       Asignaciones. Cargar el estado previo dentro del interceptor
- *       requeriría inyectar AsignacionesService, creando acoplamiento
- *       circular y duplicando queries.
- *     → El service ya tiene el repo y la lógica de búsqueda, así que es
- *       natural que él cargue y adjunte los datos al request context.
+ * ─── Trazabilidad mediante Eventos de Dominio ───
+ *   En lugar de usar interceptores, el servicio emite eventos de dominio
+ *   cuando ocurren cambios (CREACION, MODIFICACION, ELIMINACION).
+ *   TrazabilidadService escucha estos eventos y los persiste en la tabla
+ *   de auditoría. Esto desacopla la lógica de negocio de la auditoría.
  *
  * Eliminación lógica:
  *   Se usa soft-delete (activo = false) en lugar de DELETE físico
  *   para preservar la trazabilidad histórica de las asignaciones.
  */
-@Injectable({ scope: Scope.REQUEST }) // Scope.REQUEST — necesario para inyectar REQUEST
+@Injectable()
 export class AsignacionesService {
   private readonly logger = new Logger(AsignacionesService.name);
 
@@ -59,7 +53,7 @@ export class AsignacionesService {
     private readonly asignacionRepo: Repository<Asignacion>,
     private readonly usuariosClient: UsuariosClient,
     private readonly vehiculosClient: VehiculosClient,
-    @Inject(REQUEST) private readonly request: Request,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ──────────────────────────────────────────────
@@ -72,9 +66,11 @@ export class AsignacionesService {
    *  1. El userId exista en el microservicio de Usuarios (vía Kong)
    *  2. El vehicleId exista en el microservicio de Vehículos (vía Kong)
    *  3. El vehículo no tenga ya una asignación activa
+   *
+   * Emite un evento AsignacionCreadaEvent para la auditoría.
    */
   async crear(dto: CreateAsignacionDto): Promise<Asignacion> {
-    // ─── Validar existencia en microservicios externos (FASE 4) ───
+    // ─── Validar existencia en microservicios externos ───
     await this.validarExistenciaExterna(dto.userId, dto.vehicleId);
 
     await this.validarVehiculoNoActivoParaOtro(dto.vehicleId);
@@ -84,6 +80,8 @@ export class AsignacionesService {
       where: { userId: dto.userId, vehicleId: dto.vehicleId },
     });
 
+    let asignacion: Asignacion;
+
     if (existente) {
       if (existente.activo) {
         throw new ConflictException(
@@ -92,15 +90,27 @@ export class AsignacionesService {
       }
       // Reactivar la asignación previamente desactivada
       existente.activo = true;
-      return this.asignacionRepo.save(existente);
+      asignacion = await this.asignacionRepo.save(existente);
+    } else {
+      const nueva = this.asignacionRepo.create({
+        userId: dto.userId,
+        vehicleId: dto.vehicleId,
+        activo: true,
+      });
+      asignacion = await this.asignacionRepo.save(nueva);
     }
 
-    const nueva = this.asignacionRepo.create({
-      userId: dto.userId,
-      vehicleId: dto.vehicleId,
-      activo: true,
-    });
-    return this.asignacionRepo.save(nueva);
+    // ─── Emitir evento de creación para auditoría ───
+    this.eventEmitter.emit(
+      'asignacion.creada',
+      new AsignacionCreadaEvent(dto.userId, dto.vehicleId, {
+        userId: dto.userId,
+        vehicleId: dto.vehicleId,
+        activo: true,
+      }),
+    );
+
+    return asignacion;
   }
 
   // ──────────────────────────────────────────────
@@ -113,9 +123,9 @@ export class AsignacionesService {
    */
   async crearBatch(
     dto: CreateAsignacionBatchDto,
-  ): Promise<{ exitosas: Asignacion[]; errores: { vehicleId: number; mensaje: string }[] }> {
+  ): Promise<{ exitosas: Asignacion[]; errores: { vehicleId: string; mensaje: string }[] }> {
     const exitosas: Asignacion[] = [];
-    const errores: { vehicleId: number; mensaje: string }[] = [];
+    const errores: { vehicleId: string; mensaje: string }[] = [];
 
     for (const item of dto.vehiculos) {
       try {
@@ -145,11 +155,11 @@ export class AsignacionesService {
    *  - Si se envía `newUserId`, reasigna el vehículo: desactiva la actual
    *    y crea una nueva asignación con el nuevo propietario.
    *
-   * Adjunta el estado anterior a req['__datosAnteriores'] para el interceptor.
+   * Emite un evento AsignacionModificadaEvent para la auditoría.
    */
   async actualizar(
-    userId: number,
-    vehicleId: number,
+    userId: string,
+    vehicleId: string,
     dto: UpdateAsignacionDto,
   ): Promise<Asignacion> {
     if (dto.activo === undefined && dto.newUserId === undefined) {
@@ -160,8 +170,8 @@ export class AsignacionesService {
 
     const asignacion = await this.buscarOFallar(userId, vehicleId);
 
-    // ─── Capturar estado anterior para trazabilidad ───
-    this.adjuntarDatosAnteriores(asignacion);
+    // Capturar el estado anterior para el payload del evento
+    const estadoAnterior = JSON.parse(JSON.stringify(asignacion));
 
     // ─── Reasignación a otro propietario ───
     if (dto.newUserId !== undefined) {
@@ -171,12 +181,21 @@ export class AsignacionesService {
         );
       }
 
-      // Validar que el nuevo usuario exista (FASE 4)
+      // Validar que el nuevo usuario exista
       await this.usuariosClient.findById(dto.newUserId);
 
       // Desactivar la asignación actual
       asignacion.activo = false;
-      await this.asignacionRepo.save(asignacion);
+      const asignacionActualizada = await this.asignacionRepo.save(asignacion);
+
+      // Emitir evento de modificación
+      this.eventEmitter.emit(
+        'asignacion.modificada',
+        new AsignacionModificadaEvent(userId, vehicleId, {
+          anterior: estadoAnterior,
+          nuevo: asignacionActualizada,
+        }),
+      );
 
       // Crear la nueva asignación con el nuevo propietario
       return this.crear({ userId: dto.newUserId, vehicleId });
@@ -191,7 +210,18 @@ export class AsignacionesService {
       asignacion.activo = dto.activo;
     }
 
-    return this.asignacionRepo.save(asignacion);
+    const asignacionActualizada = await this.asignacionRepo.save(asignacion);
+
+    // ─── Emitir evento de modificación para auditoría ───
+    this.eventEmitter.emit(
+      'asignacion.modificada',
+      new AsignacionModificadaEvent(userId, vehicleId, {
+        anterior: estadoAnterior,
+        nuevo: asignacionActualizada,
+      }),
+    );
+
+    return asignacionActualizada;
   }
 
   // ──────────────────────────────────────────────
@@ -206,9 +236,9 @@ export class AsignacionesService {
    *     activo = false y se puede auditar quién fue dueño de cada vehículo.
    *   → La entidad de trazabilidad referencia estas filas.
    *
-   * Adjunta el estado anterior a req['__datosAnteriores'] para el interceptor.
+   * Emite un evento AsignacionEliminadaEvent para la auditoría.
    */
-  async eliminar(userId: number, vehicleId: number): Promise<Asignacion> {
+  async eliminar(userId: string, vehicleId: string): Promise<Asignacion> {
     const asignacion = await this.buscarOFallar(userId, vehicleId);
 
     if (!asignacion.activo) {
@@ -217,11 +247,42 @@ export class AsignacionesService {
       );
     }
 
-    // ─── Capturar estado anterior para trazabilidad ───
-    this.adjuntarDatosAnteriores(asignacion);
+    // Capturar el estado anterior para el payload del evento
+    const estadoAnterior = JSON.parse(JSON.stringify(asignacion));
 
     asignacion.activo = false;
-    return this.asignacionRepo.save(asignacion);
+    const asignacionEliminada = await this.asignacionRepo.save(asignacion);
+
+    // ─── Emitir evento de eliminación para auditoría ───
+    this.eventEmitter.emit(
+      'asignacion.eliminada',
+      new AsignacionEliminadaEvent(userId, vehicleId, {
+        anterior: estadoAnterior,
+        nuevo: asignacionEliminada,
+      }),
+    );
+
+    return asignacionEliminada;
+  }
+
+  // ──────────────────────────────────────────────
+  // CONSULTAR — flota por propietario (RF3)
+  // ──────────────────────────────────────────────
+
+  /**
+   * Retorna la lista de vehículos asignados a un usuario.
+   * Solo incluye asignaciones activas.
+   */
+  async obtenerFlotaPorPropietario(userId: string): Promise<Asignacion[]> {
+    return this.asignacionRepo.find({
+      where: {
+        userId,
+        activo: true,
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
   }
 
   // ──────────────────────────────────────────────
@@ -232,8 +293,8 @@ export class AsignacionesService {
    * Busca una asignación por su clave compuesta o lanza NotFoundException.
    */
   private async buscarOFallar(
-    userId: number,
-    vehicleId: number,
+    userId: string,
+    vehicleId: string,
   ): Promise<Asignacion> {
     const asignacion = await this.asignacionRepo.findOne({
       where: { userId, vehicleId },
@@ -254,8 +315,8 @@ export class AsignacionesService {
    * (útil al reactivar la propia asignación).
    */
   private async validarVehiculoNoActivoParaOtro(
-    vehicleId: number,
-    excludeUserId?: number,
+    vehicleId: string,
+    excludeUserId?: string,
   ): Promise<void> {
     const qb = this.asignacionRepo
       .createQueryBuilder('a')
@@ -277,17 +338,16 @@ export class AsignacionesService {
 
   /**
    * Valida que el userId y vehicleId existan en los microservicios externos
-   * consultando a través de Kong API Gateway (FASE 4).
+   * consultando a través de Kong API Gateway.
    *
-   * Si alguno no existe, se lanza la excepción de dominio correspondiente
-   * (UsuarioNoEncontradoException / VehiculoNoEncontradoException).
+   * Si alguno no existe, se lanza la excepción de dominio correspondiente.
    * Si algún servicio no está disponible, se lanza ServicioNoDisponibleException.
    *
    * Las consultas se ejecutan en paralelo con Promise.all para mayor eficiencia.
    */
   private async validarExistenciaExterna(
-    userId: number,
-    vehicleId: number,
+    userId: string,
+    vehicleId: string,
   ): Promise<void> {
     this.logger.log(
       `Validando existencia externa: usuario=${userId}, vehículo=${vehicleId}`,
@@ -300,22 +360,6 @@ export class AsignacionesService {
 
     this.logger.log(
       `Existencia verificada: usuario=${userId}, vehículo=${vehicleId}`,
-    );
-  }
-
-  /**
-   * Adjunta el estado anterior de la entidad al request context.
-   *
-   * El TrazabilidadInterceptor leerá este valor DESPUÉS de que el handler
-   * termine (en el tap() del Observable) para registrar el evento de auditoría
-   * con los datos anteriores vs. los datos nuevos.
-   *
-   * Se crea una copia profunda (structuredClone / JSON) para evitar que
-   * la mutación posterior del objeto en memoria afecte los datos capturados.
-   */
-  private adjuntarDatosAnteriores(entidad: Asignacion): void {
-    (this.request as any)['__datosAnteriores'] = JSON.parse(
-      JSON.stringify(entidad),
     );
   }
 }

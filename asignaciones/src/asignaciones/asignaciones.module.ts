@@ -7,14 +7,20 @@ import { TrazabilidadModule } from '../trazabilidad/trazabilidad.module';
 import { ClientsModule } from '../clients/clients.module';
 
 /**
- * Módulo de Asignaciones — FASE 2 (RF1) + FASE 3 (RF2) + FASE 4.
+ * Módulo de Asignaciones — RF1 (Asignación) + RF2 (Trazabilidad) + RF3 (Consulta).
  *
  * Importa:
  *   - TypeOrmModule.forFeature([Asignacion]) → repositorio de asignaciones
- *   - TrazabilidadModule → para que el TrazabilidadInterceptor pueda
- *     inyectar TrazabilidadService dentro de este módulo
+ *   - TrazabilidadModule → proporciona TrazabilidadService que escucha
+ *     eventos de dominio emitidos por AsignacionesService
  *   - ClientsModule → UsuariosClient y VehiculosClient para validar
  *     existencia de usuarios/vehículos antes de crear asignaciones
+ *
+ * Patrón: Event-Driven Architecture
+ *   - AsignacionesService emite eventos: asignacion.creada, asignacion.modificada,
+ *     asignacion.eliminada
+ *   - TrazabilidadService escucha estos eventos vía @OnEvent() decorador
+ *   - La auditoría se registra automáticamente de forma desacoplada
  */
 @Module({
   imports: [

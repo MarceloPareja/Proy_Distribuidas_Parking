@@ -1,21 +1,24 @@
 import { Type } from 'class-transformer';
 import {
-  IsInt,
-  IsPositive,
+  IsUUID,
   IsArray,
   ArrayMinSize,
   ArrayNotEmpty,
   ValidateNested,
 } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 /**
  * Elemento individual dentro del batch — solo el vehicleId,
  * ya que el userId es compartido para todo el lote.
  */
 export class BatchVehicleItemDto {
-  @IsInt({ message: 'vehicleId debe ser un número entero' })
-  @IsPositive({ message: 'vehicleId debe ser un número positivo' })
-  vehicleId: number;
+  @ApiProperty({
+    description: 'ID del vehículo',
+    example: '550e8400-e29b-41d4-a716-446655440001',
+  })
+  @IsUUID('4', { message: 'vehicleId debe ser un UUID válido' })
+  vehicleId: string;
 }
 
 /**
@@ -23,19 +26,22 @@ export class BatchVehicleItemDto {
  *
  * Ejemplo de payload:
  * {
- *   "userId": 5,
+ *   "userId": "550e8400-e29b-41d4-a716-446655440000",
  *   "vehiculos": [
- *     { "vehicleId": 10 },
- *     { "vehicleId": 11 },
- *     { "vehicleId": 12 }
+ *     { "vehicleId": "550e8400-e29b-41d4-a716-446655440001" },
+ *     { "vehicleId": "550e8400-e29b-41d4-a716-446655440002" },
+ *     { "vehicleId": "550e8400-e29b-41d4-a716-446655440003" }
  *   ]
  * }
  */
 export class CreateAsignacionBatchDto {
-  /** ID del propietario (usuario) */
-  @IsInt({ message: 'userId debe ser un número entero' })
-  @IsPositive({ message: 'userId debe ser un número positivo' })
-  userId: number;
+  /** ID del propietario (usuario) — UUID */
+  @ApiProperty({
+    description: 'ID del propietario (usuario)',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+  })
+  @IsUUID('4', { message: 'userId debe ser un UUID válido' })
+  userId: string;
 
   /** Lista de vehículos a asignar */
   @IsArray({ message: 'vehiculos debe ser un arreglo' })

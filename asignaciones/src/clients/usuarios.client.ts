@@ -12,7 +12,8 @@ import {
  *
  * Ruta Kong: /api/usuarios
  *   - strip_path: true → el path /api/usuarios se elimina al llegar al servicio upstream.
- *   - Ej: GET /api/usuarios/users/5  →  upstream: GET /users/5
+ *   - Ej: GET /api/usuarios/users/550e8400-e29b-41d4-a716-446655440000  
+ *         →  upstream: GET /users/550e8400-e29b-41d4-a716-446655440000
  *
  * ─── Manejo de errores ───
  *   - 404         → UsuarioNoEncontradoException (dominio)
@@ -28,12 +29,12 @@ export class UsuariosClient {
 
   /**
    * Verifica que un usuario exista consultando el microservicio de Usuarios.
-   * @param userId ID del usuario a verificar
+   * @param userId ID del usuario a verificar (UUID)
    * @returns Datos del usuario si existe
    * @throws UsuarioNoEncontradoException si el usuario no existe (404)
    * @throws ServicioNoDisponibleException si el servicio no responde (502/503/timeout)
    */
-  async findById(userId: number): Promise<any> {
+  async findById(userId: string): Promise<any> {
     this.logger.log(`Consultando usuario ${userId} vía Kong...`);
 
     try {
@@ -51,7 +52,7 @@ export class UsuariosClient {
    * Mapea errores HTTP a excepciones de dominio propias.
    * Centraliza la lógica de manejo para mantener findById() limpio.
    */
-  private handleError(error: unknown, userId: number): never {
+  private handleError(error: unknown, userId: string): never {
     if (error instanceof AxiosError) {
       const status = error.response?.status;
 

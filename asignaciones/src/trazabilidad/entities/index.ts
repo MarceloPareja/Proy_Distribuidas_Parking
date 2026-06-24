@@ -1,1 +1,1 @@
-export { EventoAuditoria, TipoAccion } from './evento-auditoria.entity';
+export { Auditoria, TipoAccion } from './evento-auditoria.entity';

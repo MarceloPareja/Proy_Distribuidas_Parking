@@ -13,7 +13,8 @@ import {
  *
  * Ruta Kong: /api/vehiculos
  *   - strip_path: false → el path se conserva al llegar al servicio upstream.
- *   - Ej: GET /api/vehiculos/5  →  upstream: GET /api/vehiculos/5
+ *   - Ej: GET /api/vehiculos/550e8400-e29b-41d4-a716-446655440001  
+ *         →  upstream: GET /api/vehiculos/550e8400-e29b-41d4-a716-446655440001
  *
  * ─── Seguridad (Key Auth) ───
  *   Si la ruta de Vehículos en Kong tiene Key Auth habilitado (consumer
@@ -52,12 +53,12 @@ export class VehiculosClient {
 
   /**
    * Verifica que un vehículo exista consultando el microservicio de Vehículos.
-   * @param vehicleId ID del vehículo a verificar
+   * @param vehicleId ID del vehículo a verificar (UUID)
    * @returns Datos del vehículo (con tipo y categoría) si existe
    * @throws VehiculoNoEncontradoException si el vehículo no existe (404)
    * @throws ServicioNoDisponibleException si el servicio no responde (502/503/timeout)
    */
-  async findById(vehicleId: number): Promise<any> {
+  async findById(vehicleId: string): Promise<any> {
     this.logger.log(`Consultando vehículo ${vehicleId} vía Kong...`);
 
     try {
@@ -81,7 +82,7 @@ export class VehiculosClient {
   /**
    * Mapea errores HTTP a excepciones de dominio propias.
    */
-  private handleError(error: unknown, vehicleId: number): never {
+  private handleError(error: unknown, vehicleId: string): never {
     if (error instanceof AxiosError) {
       const status = error.response?.status;
 

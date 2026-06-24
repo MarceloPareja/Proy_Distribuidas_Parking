@@ -1,20 +1,25 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { EventoAuditoria } from './entities/evento-auditoria.entity';
+import { Auditoria } from './entities/evento-auditoria.entity';
 import { TrazabilidadService } from './trazabilidad.service';
 import { TrazabilidadController } from './trazabilidad.controller';
 
 /**
- * Módulo de Trazabilidad — FASE 3 (RF2).
+ * Módulo de Trazabilidad — RF2 (Auditoría).
  *
  * Responsabilidades:
  *   - Persistir eventos de auditoría (via TrazabilidadService)
- *   - Exponer endpoint de solo lectura para consultar historial
- *   - Exportar TrazabilidadService para que el TrazabilidadInterceptor
- *     (registrado en AsignacionesModule) pueda inyectarlo.
+ *   - Exponer endpoints de solo lectura para consultar historial
+ *   - Escuchar eventos de dominio emitidos por AsignacionesService
+ *     y registrar la auditoría en la tabla de auditoría.
+ *
+ * Patrón: Event-Driven Architecture desacoplado
+ *   - AsignacionesService emite eventos de dominio
+ *   - TrazabilidadService escucha estos eventos vía @OnEvent()
+ *   - La auditoría se registra automáticamente sin acoplamiento
  */
 @Module({
-  imports: [TypeOrmModule.forFeature([EventoAuditoria])],
+  imports: [TypeOrmModule.forFeature([Auditoria])],
   controllers: [TrazabilidadController],
   providers: [TrazabilidadService],
   exports: [TrazabilidadService],

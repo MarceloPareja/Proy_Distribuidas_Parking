@@ -8,7 +8,7 @@ import { NotFoundException } from '@nestjs/common';
  * la respuesta adecuada sin manejo adicional en el controller.
  */
 export class UsuarioNoEncontradoException extends NotFoundException {
-  constructor(userId: number) {
+  constructor(userId: string) {
     super(`El usuario con ID ${userId} no existe o no se pudo verificar`);
   }
 }
