@@ -3,6 +3,7 @@ import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { RolesService } from './roles.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { RoleName } from './enums/role-name.enum';
 
 @ApiTags('Roles')
 @Controller('roles')
@@ -10,9 +11,9 @@ export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Crear rol', description: 'Registra un nuevo rol en el sistema' })
+  @ApiOperation({ summary: 'Crear rol', description: 'Registra un nuevo rol en el sistema. Solo acepta valores del enum RoleName.' })
   @ApiResponse({ status: 201, description: 'Rol creado exitosamente' })
-  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos' })
+  @ApiResponse({ status: 400, description: 'Datos de entrada inválidos o rol no pertenece al enum' })
   @ApiResponse({ status: 409, description: 'Ya existe un rol con ese nombre' })
   create(@Body() createRoleDto: CreateRoleDto) {
     return this.rolesService.create(createRoleDto);
@@ -25,6 +26,13 @@ export class RolesController {
     return this.rolesService.findAll();
   }
 
+  @Get('available')
+  @ApiOperation({ summary: 'Listar roles disponibles del enum', description: 'Devuelve los valores válidos del enum RoleName' })
+  @ApiResponse({ status: 200, description: 'Lista de roles disponibles del enum' })
+  getAvailableRoles() {
+    return this.rolesService.getAvailableRoles();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Obtener rol por ID', description: 'Busca un rol por su identificador UUID' })
   @ApiParam({ name: 'id', description: 'UUID del rol', example: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' })
@@ -35,11 +43,11 @@ export class RolesController {
   }
 
   @Get('/name/:name')
-  @ApiOperation({ summary: 'Obtener rol por nombre', description: 'Busca un rol por su nombre' })
-  @ApiParam({ name: 'name', description: 'Nombre del rol', example: 'ADMIN' })
+  @ApiOperation({ summary: 'Obtener rol por nombre', description: 'Busca un rol por su nombre (valor del enum)' })
+  @ApiParam({ name: 'name', description: 'Nombre del rol (enum)', example: 'ADMIN', enum: RoleName })
   @ApiResponse({ status: 200, description: 'Rol encontrado' })
   @ApiResponse({ status: 404, description: 'Rol no encontrado' })
-  findByName(@Param('name') name: string){
+  findByName(@Param('name') name: RoleName){
     return this.rolesService.findByName(name);
   }
 

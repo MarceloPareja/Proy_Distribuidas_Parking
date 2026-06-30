@@ -1,0 +1,7 @@
+export enum RoleName {
+  CLIENTE = 'CLIENTE',
+  ADMIN = 'ADMIN',
+  RECAUDADOR = 'RECAUDADOR',
+  ROOT = 'ROOT',
+  INVITADO = 'INVITADO',
+}

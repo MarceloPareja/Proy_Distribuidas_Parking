@@ -128,6 +128,13 @@ export class UsersService {
     });
   }
 
+  async findOneByUsername(username: string): Promise<User | null> {
+    return this.userRepository.findOne({
+      where: { username },
+      relations: { userRoles: { role: true } },
+    });
+  }
+
 async update(id: string, updateUserDto: UpdateUserDto): Promise<User> {
   const user = await this.findOne(id);
 

@@ -1,13 +1,10 @@
 import {
+  IsEnum,
   IsNotEmpty,
-  IsString,
   IsUUID,
-  Matches,
-  MaxLength,
-  MinLength,
 } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
-import { ToUpperCaseTrim } from '../../common/transformers/sanitize.transformer';
+import { RoleName } from '../../roles/enums/role-name.enum';
 
 export class CreateRoleuserDto {
   @ApiProperty({
@@ -19,18 +16,13 @@ export class CreateRoleuserDto {
   id_user!: string;
 
   @ApiProperty({
-    description: 'Nombre del rol a asignar en formato UPPER_SNAKE_CASE',
+    description: 'Nombre del rol a asignar (debe ser un valor del enum RoleName)',
     example: 'ADMIN',
-    minLength: 2,
-    maxLength: 50,
+    enum: RoleName,
   })
-  @IsString()
+  @IsEnum(RoleName, {
+    message: `El rol debe ser uno de los siguientes valores: ${Object.values(RoleName).join(', ')}`,
+  })
   @IsNotEmpty({ message: 'El nombre del rol es obligatorio' })
-  @MinLength(2, { message: 'El nombre debe tener al menos 2 caracteres' })
-  @MaxLength(50, { message: 'El nombre no puede tener más de 50 caracteres' })
-  @Matches(/^[A-Z]+(_[A-Z]+)*$/, {
-    message: 'El nombre del rol solo puede contener letras y guiones bajos (ej: ADMIN, USER_MANAGER)',
-  })
-  @ToUpperCaseTrim()
-  role_name!: string;
+  role_name!: RoleName;
 }

@@ -11,6 +11,7 @@ import { CreateRoleuserDto } from './dto/create-roleuser.dto';
 import { UpdateRoleuserDto } from './dto/update-roleuser.dto';
 import { UsersService } from 'src/users/users.service';
 import { RolesService } from 'src/roles/roles.service';
+import { RoleName } from 'src/roles/enums/role-name.enum';
 
 @Injectable()
 export class RoleusersService {

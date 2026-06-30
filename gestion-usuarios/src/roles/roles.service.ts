@@ -4,12 +4,13 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Role } from './entities/role.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { RoleDeactivatedEvent } from './roles.events';
+import { RoleName } from './enums/role-name.enum';
 
 @Injectable()
 export class RolesService {
@@ -21,7 +22,7 @@ export class RolesService {
 
   async create(createRoleDto: CreateRoleDto): Promise<Role> {
     const existing = await this.roleRepository.findOne({
-      where: { name: ILike(createRoleDto.name) },
+      where: { name: createRoleDto.name },
     });
     if (existing) {
       throw new ConflictException(
@@ -54,10 +55,9 @@ export class RolesService {
     return role;
   }
 
-  async findByName(name: string): Promise<Role | null> {
-    const normalizedName = name.toLowerCase();
+  async findByName(name: RoleName): Promise<Role | null> {
     const role = await this.roleRepository.findOne({
-      where: { name: ILike(name) },
+      where: { name },
       relations: { userRoles: true },
     });
     if (!role) {
@@ -105,5 +105,12 @@ export class RolesService {
     const role = await this.findOne(id);
     await this.roleRepository.remove(role);
     return { message: `Rol con id "${id}" eliminado correctamente` };
+  }
+
+  /**
+   * Devuelve todos los valores válidos del enum RoleName
+   */
+  getAvailableRoles(): RoleName[] {
+    return Object.values(RoleName);
   }
 }

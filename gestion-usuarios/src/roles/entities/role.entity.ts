@@ -1,5 +1,6 @@
 import { UserRole } from "src/roleusers/entities/roleuser.entity";
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from "typeorm";
+import { RoleName } from "../enums/role-name.enum";
 
 @Entity('role')
 export class Role {
@@ -15,8 +16,12 @@ export class Role {
   @Column({ type: 'text', nullable: true })
   description!: string;
  
-  @Column({ unique: true })
-  name!: string;
+  @Column({
+    type: 'enum',
+    enum: RoleName,
+    unique: true,
+  })
+  name!: RoleName;
  
   @UpdateDateColumn()
   updated_at!: Date;
