@@ -2,12 +2,15 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
+import { endpointPermission } from './entities/endpointPermission.entity';
+import { EndpointPermissionRepository } from './repositories/endpointPermissions.repository';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly endpointPermissionRepository: EndpointPermissionRepository,
   ) {}
 
   async validateUser(username: string, pass: string): Promise<any> {
@@ -41,5 +44,17 @@ export class AuthService {
     return {
       access_token: this.jwtService.sign(payload),
     };
+  }
+
+  async validateRoles(endpoint: string, method: string, userRoles: string[]): Promise<boolean> {
+    const endpointPermission = await this.endpointPermissionRepository.find({
+      where: { path: endpoint, method },
+    });
+
+    if (!endpointPermission) {
+      throw new UnauthorizedException('No se encontraron permisos para este endpoint y método');
+    }
+
+    return endpointPermission.allowedRoles.some((role: string) => userRoles.includes(role));
   }
 }

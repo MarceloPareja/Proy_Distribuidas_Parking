@@ -1,9 +1,13 @@
 import {
   Body,
   Controller,
+  ForbiddenException,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Req,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiOperation,
@@ -12,6 +16,7 @@ import {
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @ApiTags('Autenticación')
 @Controller('auth')
@@ -35,5 +40,20 @@ export class AuthController {
       loginDto.password,
     );
     return this.authService.login(user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('validate')
+  @HttpCode(200)
+  validate(@Req() req) {
+    const method = req.headers['x-original-method'];
+    const path = req.headers['x-original-path'];
+    
+    this.authService.validateRoles(path, method, req.user.roles);
+    return {
+      userId: req.user.userId,
+      username: req.user.username,
+      roles: req.user.roles,
+    };
   }
 }
